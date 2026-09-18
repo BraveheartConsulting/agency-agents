@@ -28,3 +28,6 @@ jobs:
 
       - name: Run generator fixtures
         run: python3 scripts/check-cabinet-generate.py
+
+      - name: Run migration fixtures
+        run: python3 scripts/check-cabinet-migrate.py
