@@ -1,0 +1,19 @@
+# Copy to the cabinet repo root as cabinet.yml.
+# scripts/cabinet-validate.py reads it; everything here is optional.
+
+schema_version: 1
+
+# Directory holding the cabinet, relative to the repo root.
+content_root: .
+
+# Files under content_root that are not cabinet documents. Anything not
+# excluded must carry valid front-matter.
+exclude:
+  - SCHEMA.md
+  - README.md
+  - "**/_assets/**"
+  - ".github/**"
+
+# Ids intentionally retired. V4 fails on an id that disappears unless it is
+# listed here, so a deliberate deletion is a reviewable one-line diff.
+allow_removed_ids: []
