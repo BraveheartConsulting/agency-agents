@@ -1,8 +1,11 @@
 # Copy to the cabinet repo as .github/workflows/check-cabinet.yml, alongside
-# cabinet.yml and scripts/cabinet-validate.py.
+# cabinet.yml, scripts/cabinet-validate.py and scripts/cabinet-generate.py.
 #
 # V4 (id immutability) compares front-matter against a base commit, so the
 # checkout needs full history, not the default shallow one.
+#
+# index.html is built here and published to Pages, never committed: a generated
+# file in the tree means every agent PR collides on it.
 
 name: Check Cabinet
 
@@ -10,6 +13,9 @@ on:
   pull_request:
   push:
     branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   validate:
@@ -57,3 +63,28 @@ jobs:
             echo "No base commit to compare against; V4 will be skipped."
             python3 scripts/cabinet-validate.py
           fi
+
+      # Building on a PR too, so a change that validates but cannot render is
+      # caught before it lands rather than on the next push to main.
+      - name: Build index.html
+        run: python3 scripts/cabinet-generate.py --out site/index.html --title Cabinet
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'push'
+        with:
+          path: site
+
+  publish:
+    name: publish to Pages
+    needs: validate
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
