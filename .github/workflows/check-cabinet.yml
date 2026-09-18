@@ -1,0 +1,33 @@
+name: Check Cabinet Tooling
+
+# Runs on every PR (no path filter on purpose): the validator is the only thing
+# standing between agent-authored docs and a broken dependency graph, and the
+# generator is what anyone actually reads, so a change anywhere that breaks
+# either one's fixtures must trip this check.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check-cabinet:
+    name: cabinet tooling satisfies its fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: python3 -m pip install --quiet pyyaml
+
+      - name: Run validator fixtures
+        run: python3 scripts/check-cabinet-validate.py
+
+      - name: Run generator fixtures
+        run: python3 scripts/check-cabinet-generate.py
+
+      - name: Run migration fixtures
+        run: python3 scripts/check-cabinet-migrate.py
