@@ -1,0 +1,59 @@
+# Copy to the cabinet repo as .github/workflows/check-cabinet.yml, alongside
+# cabinet.yml and scripts/cabinet-validate.py.
+#
+# V4 (id immutability) compares front-matter against a base commit, so the
+# checkout needs full history, not the default shallow one.
+
+name: Check Cabinet
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    name: documents satisfy the cabinet schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: python3 -m pip install --quiet pyyaml
+
+      # On a PR, compare ids against the branch being merged into. On a push,
+      # compare against the previous commit. The very first commit in a repo
+      # has neither, and there V4 has nothing to say.
+      - name: Resolve base ref for V4
+        id: base
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "pull_request" ]; then
+            git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+            echo "ref=origin/${BASE_REF}" >> "$GITHUB_OUTPUT"
+          elif git rev-parse --verify --quiet HEAD^ >/dev/null; then
+            echo "ref=HEAD^" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate cabinet
+        env:
+          BASE: ${{ steps.base.outputs.ref }}
+        run: |
+          set -euo pipefail
+          if [ -n "$BASE" ]; then
+            python3 scripts/cabinet-validate.py --base "$BASE"
+          else
+            echo "No base commit to compare against; V4 will be skipped."
+            python3 scripts/cabinet-validate.py
+          fi

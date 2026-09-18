@@ -1,0 +1,26 @@
+name: Check Cabinet Validator
+
+# Runs on every PR (no path filter on purpose): the cabinet validator is the
+# only thing standing between agent-authored docs and a broken dependency
+# graph, so a change anywhere that breaks its fixtures must trip this check.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check-cabinet-validator:
+    name: cabinet validator satisfies its fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: python3 -m pip install --quiet pyyaml
+
+      - name: Run validator fixtures
+        run: python3 scripts/check-cabinet-validate.py
