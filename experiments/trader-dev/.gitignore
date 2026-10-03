@@ -1,0 +1,2 @@
+# Root .gitignore has *.log; the MCP call log is deliberate evidence, keep it.
+!calls.log
