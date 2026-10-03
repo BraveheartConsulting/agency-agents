@@ -2,3 +2,4 @@
 2026-10-03T11:25:00Z | mcp__Trader_Dev_03102026__whoami | args: {} | response: error, ~420 chars ("This session has no API key") | 2nd consecutive error, stopped
 2026-10-03T11:30:00Z | mcp__Trader_Dev_03102026__whoami | args: {} | response: error, ~60 chars ("MCP server needs authentication"); server tools then removed from session
 2026-10-03T11:37:05Z | mcp__trader-dev__whoami | args: {} | response: error, ~470 chars ("This session has no API key"); connector now exposes 49 tools under the renamed server mcp__trader-dev__ | 4th failed auth check overall, stopped
+2026-10-03T11:44:30Z | mcp__trader-dev__login | args: {} | response: ~430 chars, authenticated=false, loginUrl + 4 paste-the-key instructions; NO connector-URL flow offered (contradicts whoami's error text)
