@@ -1,0 +1,2 @@
+2026-10-03T11:20:10Z | mcp__Trader_Dev_03102026__whoami | args: {} | response: error, ~420 chars ("This session has no API key")
+2026-10-03T11:25:00Z | mcp__Trader_Dev_03102026__whoami | args: {} | response: error, ~420 chars ("This session has no API key") | 2nd consecutive error, stopped
