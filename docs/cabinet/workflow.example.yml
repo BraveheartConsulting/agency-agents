@@ -1,0 +1,90 @@
+# Copy to the cabinet repo as .github/workflows/check-cabinet.yml, alongside
+# cabinet.yml, scripts/cabinet-validate.py and scripts/cabinet-generate.py.
+#
+# V4 (id immutability) compares front-matter against a base commit, so the
+# checkout needs full history, not the default shallow one.
+#
+# index.html is built here and published to Pages, never committed: a generated
+# file in the tree means every agent PR collides on it.
+
+name: Check Cabinet
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: documents satisfy the cabinet schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: python3 -m pip install --quiet pyyaml
+
+      # On a PR, compare ids against the branch being merged into. On a push,
+      # compare against the previous commit. The very first commit in a repo
+      # has neither, and there V4 has nothing to say.
+      - name: Resolve base ref for V4
+        id: base
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "pull_request" ]; then
+            git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+            echo "ref=origin/${BASE_REF}" >> "$GITHUB_OUTPUT"
+          elif git rev-parse --verify --quiet HEAD^ >/dev/null; then
+            echo "ref=HEAD^" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate cabinet
+        env:
+          BASE: ${{ steps.base.outputs.ref }}
+        run: |
+          set -euo pipefail
+          if [ -n "$BASE" ]; then
+            python3 scripts/cabinet-validate.py --base "$BASE"
+          else
+            echo "No base commit to compare against; V4 will be skipped."
+            python3 scripts/cabinet-validate.py
+          fi
+
+      # Building on a PR too, so a change that validates but cannot render is
+      # caught before it lands rather than on the next push to main.
+      - name: Build index.html
+        run: python3 scripts/cabinet-generate.py --out site/index.html --title Cabinet
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'push'
+        with:
+          path: site
+
+  publish:
+    name: publish to Pages
+    needs: validate
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
